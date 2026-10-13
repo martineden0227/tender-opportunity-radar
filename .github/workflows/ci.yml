@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 离线测试（Python ${{ matrix.python-version }} / ${{ matrix.os }}）
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.9", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: 运行测试
+        # 全部测试均为离线运行：使用内置样例页验证解析链路，
+        # 不访问任何外部站点，因此 CI 稳定且不会给对方站点造成压力。
+        run: pytest -q
+
+      - name: 离线演练（冒烟）
+        run: tender-notice demo

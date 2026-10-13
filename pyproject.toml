@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tender-notice-cn"
+version = "0.1.0"
+description = "中国招标公告采集工具：中国政府采购网 + 中国招标投标公共服务平台（含数据质量校验）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["tender", "bidding", "procurement", "china", "crawler", "招标", "政府采购"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "requests>=2.28",
+    "beautifulsoup4>=4.11",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+tender-notice = "tender_notice_cn.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/<your-account>/tender-notice-cn"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+tender_notice_cn = ["fixtures/*.html", "fixtures/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

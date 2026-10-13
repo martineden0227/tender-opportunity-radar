@@ -1,0 +1,38 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- 采集产物（不进版本库）----
+# 采集结果属运行时数据，且可能含第三方站点内容，不随代码入库。
+# 唯一例外：examples/pool_sample.csv 由内置**合成样例**生成，用于展示输出格式。
+*.csv
+!examples/pool_sample.csv
+*.log
+output/
+out/
+data/
+*.html
+!src/tender_notice_cn/fixtures/*.html
+
+# ---- 本机环境 ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ---- 私有配置（入口覆盖、代理等，只留本机）----
+.env
+local_config.py

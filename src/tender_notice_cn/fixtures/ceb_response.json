@@ -1,0 +1,65 @@
+{
+  "_comment": "离线演练用样例响应。字段名与结构按真实接口核实后构造（2026-10 复核）。内容为示意数据，不是真实公告，不得用于业务判断。刻意保留两个边界情形：① bulletinEndTime 为 1970-01-01 空值占位；② 一条标题为空应被丢弃。",
+  "success": true,
+  "message": "",
+  "object": {
+    "page": {
+      "pageNo": 1,
+      "totalCount": 783597,
+      "totalPage": 1568,
+      "row": 500,
+      "rowNo": 0
+    },
+    "returnlist": [
+      {
+        "businessId": "ebb4d5b3d2c64927838f021e470a5301",
+        "businessObjectName": "某抽水蓄能电站35kV施工供电工程10kV、35kV电缆采购项目",
+        "tenderProjectCode": "EMCX-CG-2026-003",
+        "transactionPlatfCode": "N6501005599",
+        "transactionPlatfName": "某水利发展投资（集团）有限公司招标采购平台",
+        "regionName": "新疆维吾尔自治区 乌鲁木齐市",
+        "industriesType": "其他",
+        "receiveTime": "2026-10-03",
+        "bulletinEndTime": "2026-10-12"
+      },
+      {
+        "businessId": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "businessObjectName": "某中车时代半导体有限公司阻断测试设备采购项目招标公告",
+        "tenderProjectCode": "HNZT-2026-1128",
+        "transactionPlatfName": "某智慧阳光采购平台",
+        "regionName": "湖南省 长沙市",
+        "industriesType": "半导体材料及制造设备",
+        "receiveTime": "2026-10-02",
+        "bulletinEndTime": "1970-01-01"
+      },
+      {
+        "businessId": "11223344556677889900112233445566",
+        "businessObjectName": "某县新准热电有限责任公司燃煤接卸及煤场、输煤系统保洁服务招标公告",
+        "tenderProjectCode": "XJXZ-2026-0457",
+        "transactionPlatfName": "某光正交易平台",
+        "regionName": "新疆维吾尔自治区 昌吉州",
+        "industriesType": "其他",
+        "receiveTime": "2026-10-02",
+        "bulletinEndTime": "2026-10-22"
+      },
+      {
+        "businessId": "99887766554433221100998877665544",
+        "businessObjectName": "某电信分公司农村人居环境改善项目建设运营一体化业务项目询比公告",
+        "transactionPlatfName": "某供应链管理有限公司电子招标系统",
+        "regionName": "福建省 泉州市",
+        "industriesType": "信息技术服务",
+        "receiveTime": "2026-10-01",
+        "bulletinEndTime": "2026-10-09"
+      },
+      {
+        "businessId": "55443322110099887766554433221100",
+        "businessObjectName": "",
+        "transactionPlatfName": "某交易平台",
+        "regionName": "北京市",
+        "industriesType": "其他",
+        "receiveTime": "2026-10-01",
+        "bulletinEndTime": ""
+      }
+    ]
+  }
+}
