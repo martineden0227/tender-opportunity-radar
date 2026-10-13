@@ -40,29 +40,36 @@ python -c "import urllib.request; print(urllib.request.getproxies())"
 
 ## 标准流程
 
+**默认只采集当天**（数据量可控，适合日常跟踪）。
+
 ```bash
-# 1) 平台一：中国政府采购网（日期筛选服务端生效，取到的是该时段全量命中）
-tender-notice ccgp --days 3 --pages 5 --output ccgp_notices.csv
+# 1) 平台一：中国政府采购网（日期筛选服务端生效）
+tender-notice ccgp --pages 3 --output ccgp_today.csv
 
 # 2) 平台二：中国招标投标公共服务平台（日期筛选无效，本地按接收时间筛）
-tender-notice ceb --days 3 --output ceb_notices.csv
+tender-notice ceb --output ceb_today.csv
 
-# 3) 合并为候选池（自动去重 + 过滤中标/成交类公告）
-tender-notice merge ccgp_notices.csv ceb_notices.csv \
-  --window "近三天" --output project_pool.csv --markdown project_pool.md
+# 3) 合并为候选池（自动去重 + 过滤中标类公告）
+tender-notice merge ccgp_today.csv ceb_today.csv \
+  --window "当天" --output pool_today.csv --markdown pool_today.md
+
+# 放宽为近 N 天
+tender-notice ccgp --days 3 --pages 5 --output ccgp_3d.csv
+tender-notice ceb  --days 3 --output ceb_3d.csv
 ```
 
 ## 关键参数
 
 | 参数 | 适用 | 说明 |
 |---|---|---|
-| `--days N` | 两者 | 近 N 天（默认 3） |
-| `--start` / `--end` | 两者 | 指定区间；ccgp 用 `YYYY-MM-DD` |
+| `--days N` | 两者 | **`0` = 只采集当天（默认）**；`N>0` = 含今天在内的近 N 天 |
+| `--start` / `--end` | 两者 | 自定义区间 `YYYY-MM-DD`（覆盖 `--days`） |
 | `--pages N` | ccgp | 采集页数。**先跑 1~2 页确认能通，再放大** |
 | `--delay 8-14` | ccgp | 请求间隔。限流频繁时调大 |
 | `--row 500` | ceb | 单次返回条数，实测上限 500（默认已拉满） |
 | `--keywords "a,b,c"` | ceb | 分片关键词。**词表越贴合业务范围，覆盖越准** |
 | `--keep-results` | merge | 保留中标/成交类（默认过滤） |
+| `--wider-filter` | merge | 更严过滤（额外剔除 流标/成交公告/结果公示，改变条数口径） |
 
 ## 输出
 
@@ -87,6 +94,36 @@ tender-notice merge ccgp_notices.csv ceb_notices.csv \
 
 另外该平台的 `receiveTime` 含**提前发布与预告**，会晚于当天
 （实测出现过晚于检索日 27 天的记录）→ **投标前须回源站确认公告状态**。
+
+## ⚠️ 采集「当天」的固有竞态（必须向用户说明）
+
+政采网结果按发布时间倒序、页码是偏移量，而**当天的结果集一直在增长**。
+翻页期间新公告插入头部，整体下移 → **既重复、也漏采**。
+
+实测（当天采集 3 页）：60 个位置实际只拿到 **40 条唯一记录**。
+程序会报 `[翻页提示] 检出页间重叠…`，并声明"**这不是翻页失效**"。
+
+处置建议（按优先级）：
+
+1. **分多次采集后合并**（如上午一次、下午一次）→ 覆盖最全
+2. 只跑 `--pages 1~2` → 拿当天**最新**一批，适合盯新增
+3. 采集**昨天及更早**的窗口 → 结果集不再增长，翻页**完全稳定**
+
+**不要**把这个现象当作程序 bug 去改选择器 —— 那是方向性错误。
+
+## 输出口径锁定（改动前必读）
+
+候选池口径锁定自一个已验收的正式版本（近三天产出 **5,702 条**）。
+以下三处**刻意冻结**，有测试守护，改动即失败：
+
+| 冻结项 | 常量 | 值 |
+|---|---|---|
+| 中标类过滤词表 | `models.RESULT_KEYWORDS` | 10 个词，逐字一致 |
+| 关键词分片表 | `ceb.DEFAULT_KEYWORDS` | 50 个词 |
+| 单页容量 | `ceb.MAX_ROW` | 500 |
+
+**不要在过滤词表里加词**（加一个词就改变输出条数）。
+需要更严过滤时用 `merge(..., extended_result_filter=True)` 或 CLI `--wider-filter`。
 
 ## 未覆盖的渠道（漏采风险，如实告知）
 

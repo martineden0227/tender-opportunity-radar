@@ -18,12 +18,27 @@ PLATFORM_LABEL = {
     PLATFORM_CEB: "中国招标投标公共服务平台",
 }
 
-# 公告类型：属"研究竞争对手"环节，不进"机会级"候选池
+# 中标类公告：属"研究竞争对手"环节，不进"机会级"候选池。
+#
+# ⚠️ 这份词表**逐字沿用正式版（产出 5,702 条的那一版）**，不要随意增删 ——
+# 增一个词就会改变输出条数，破坏与既有产出的可比性。
 RESULT_KEYWORDS = (
-    "中标公告", "中标结果", "中标公示", "中标候选人", "候选人公示",
-    "成交公告", "成交结果", "结果公告", "结果更正", "结果公示",
-    "废标", "终止公告", "流标", "开标记录",
+    "中标公告", "中标结果", "成交结果", "中标(成交)", "候选人公示",
+    "中标候选人", "废标", "终止公告", "结果公告", "结果更正",
 )
+
+# 可选扩展：实测在真实数据中还命中以下类型（也确属非机会类），
+# 但**默认不启用**，以保持与正式版一致的输出条数。
+# 实测增量：流标 29 条、成交公告 18 条、结果公示 5 条（合计 52 条）。
+# 启用方式：merge(..., extended_result_filter=True) 或 CLI `--wider-filter`。
+RESULT_KEYWORDS_EXTENDED = RESULT_KEYWORDS + (
+    "流标", "成交公告", "结果公示", "中标公示", "开标记录",
+)
+
+
+def _match_result(notice: "Notice", words) -> bool:
+    hay = f"{notice.title} {notice.category}"
+    return any(w in hay for w in words)
 
 
 @dataclass
@@ -50,9 +65,17 @@ class Notice:
 
     @property
     def is_result_notice(self) -> bool:
-        """是否为中标/成交类公告（不进机会级候选池）。"""
-        hay = f"{self.title} {self.category}"
-        return any(w in hay for w in RESULT_KEYWORDS)
+        """是否为中标/成交类公告（不进机会级候选池）。
+
+        默认使用与正式版一致的核心词表；需要更严的过滤时用
+        `is_result_notice_extended`。
+        """
+        return _match_result(self, RESULT_KEYWORDS)
+
+    @property
+    def is_result_notice_extended(self) -> bool:
+        """更严的过滤口径（含流标／成交公告／结果公示等，实测多滤 52 条）。"""
+        return _match_result(self, RESULT_KEYWORDS_EXTENDED)
 
     @property
     def source_label(self) -> str:
@@ -100,5 +123,5 @@ POOL_COLUMNS = [
 
 __all__ = [
     "Notice", "PLATFORM_CCGP", "PLATFORM_CEB", "PLATFORM_LABEL",
-    "POOL_COLUMNS", "RESULT_KEYWORDS",
+    "POOL_COLUMNS", "RESULT_KEYWORDS", "RESULT_KEYWORDS_EXTENDED",
 ]

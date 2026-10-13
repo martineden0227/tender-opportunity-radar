@@ -1,8 +1,9 @@
 """命令行入口。
 
     tender-notice check  ccgp                 # 连通性自检
-    tender-notice ccgp   --days 3 --pages 5   # 采集平台一
-    tender-notice ceb    --days 3             # 采集平台二
+    tender-notice ccgp   --pages 3            # 采集平台一（默认当天）
+    tender-notice ceb                         # 采集平台二（默认当天）
+    tender-notice ccgp   --days 3 --pages 5   # 放宽为近 3 天
     tender-notice merge  a.csv b.csv          # 合并为候选池
     tender-notice demo                        # 离线演练（不联网，验证解析）
 
@@ -36,12 +37,17 @@ def _parse_delay(text: str) -> tuple[float, float] | None:
 
 
 def _resolve_window(args) -> tuple[str, str]:
-    """把 --days / --start / --end 解析成 (start, end)，均为 YYYY-MM-DD。"""
+    """解析时间窗，返回 (start, end)，均为 YYYY-MM-DD。
+
+    **默认只采集当天**（`--days 0`）—— 数据量可控，适合日常跟踪。
+    需要放宽时用 `--days N`（N>0 表示"含今天在内的近 N 天"）。
+    """
     if getattr(args, "start", ""):
         return args.start, (args.end or date.today().isoformat())
-    days = getattr(args, "days", 3) or 3
+    days = getattr(args, "days", 0) or 0
     end = date.today()
-    return (end - timedelta(days=days)).isoformat(), end.isoformat()
+    start = end if days <= 0 else end - timedelta(days=days)
+    return start.isoformat(), end.isoformat()
 
 
 def _write_simple_csv(notices: list[Notice], path: str, log=print) -> str:
@@ -128,6 +134,7 @@ def cmd_merge(args) -> int:
     notices = _load_csv(args.inputs)
     print(f"读入 {len(notices)} 条（{len(args.inputs)} 个文件）")
     rows, stats = pool.merge(notices, drop_result_notices=not args.keep_results,
+                             extended_result_filter=args.wider_filter,
                              retrieve_date=args.retrieve_date or today_iso())
     pool.write_csv(rows, args.output)
     if args.markdown:
@@ -178,7 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--version", action="version", version="tender-notice-cn 0.1.0")
+    p.add_argument("--version", action="version", version="tender-notice-cn 0.1.1")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     # check
@@ -195,8 +202,9 @@ def build_parser() -> argparse.ArgumentParser:
     a1.add_argument("--keyword", default="")
     a1.add_argument("--pinmu", default="0", help="0不限 1货物 2工程 3服务")
     a1.add_argument("--bidtype", default="0", help="公告类型，0 为不限")
-    a1.add_argument("--days", type=int, default=3)
-    a1.add_argument("--start", default="", help="YYYY-MM-DD")
+    a1.add_argument("--days", type=int, default=0,
+                    help="0=只采集当天（默认）；N>0 表示含今天在内的近 N 天")
+    a1.add_argument("--start", default="", help="YYYY-MM-DD（覆盖 --days）")
     a1.add_argument("--end", default="", help="YYYY-MM-DD")
     a1.add_argument("--delay", default="", help="请求间隔秒，如 8-14（默认 6-10）")
     a1.add_argument("--use-proxy", action="store_true")
@@ -205,8 +213,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     # ceb
     a2 = sub.add_parser("ceb", help="采集中国招标投标公共服务平台")
-    a2.add_argument("--days", type=int, default=3)
-    a2.add_argument("--start", default="", help="YYYY-MM-DD")
+    a2.add_argument("--days", type=int, default=0,
+                    help="0=只采集当天（默认）；N>0 表示含今天在内的近 N 天")
+    a2.add_argument("--start", default="", help="YYYY-MM-DD（覆盖 --days）")
     a2.add_argument("--end", default="", help="YYYY-MM-DD")
     a2.add_argument("--row", type=int, default=ceb.MAX_ROW,
                     help=f"单次返回条数，实测上限 {ceb.MAX_ROW}")
@@ -226,6 +235,9 @@ def build_parser() -> argparse.ArgumentParser:
     a3.add_argument("--retrieve-date", default="")
     a3.add_argument("--keep-results", action="store_true",
                     help="保留中标/成交类公告（默认过滤）")
+    a3.add_argument("--wider-filter", action="store_true",
+                    help="使用更严的过滤口径（额外剔除 流标/成交公告/结果公示，"
+                         "实测多滤 52 条；默认关闭以保持与正式版条数口径一致）")
     a3.set_defaults(func=cmd_merge)
 
     # demo

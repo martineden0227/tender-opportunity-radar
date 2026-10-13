@@ -54,19 +54,43 @@ def test_default_verdict_is_pending():
 
 
 def test_result_notice_flagging():
+    """默认（正式版口径）的识别边界。
+
+    ⚠️ 注意「成交公告」在正式版词表中**不被识别** ——
+    正式版只有「成交结果」。这是刻意保持的口径一致性，
+    改动它会使输出条数偏离既有产出。更严的口径见 `is_result_notice_extended`。
+    """
     assert _n(title="某项目中标结果公示").is_result_notice
-    assert _n(title="某项目成交公告").is_result_notice
+    assert _n(title="某项目中标公告").is_result_notice
     assert _n(title="某项目废标公告").is_result_notice
     assert not _n(title="某项目公开招标公告").is_result_notice
 
+    # 正式版词表不含「成交公告」与「流标」
+    assert not _n(title="某项目成交公告").is_result_notice
+    assert not _n(title="某项目流标公告").is_result_notice
+
 
 def test_merge_filters_result_notices():
+    """默认口径：只剔除正式版词表命中的类型。"""
+    items = [
+        _n(title="某项目公开招标公告"),
+        _n(title="某项目中标结果公示"),
+        _n(title="某项目成交公告"),          # 正式版词表不覆盖 → 保留
+    ]
+    rows, stats = pool.merge(items, retrieve_date="2026-10-03", log=lambda *_: None)
+    assert len(rows) == 2
+    assert stats["过滤中标类"] == 1
+
+
+def test_merge_wider_filter_drops_more():
+    """开启扩展口径后，「成交公告」也会被剔除。"""
     items = [
         _n(title="某项目公开招标公告"),
         _n(title="某项目中标结果公示"),
         _n(title="某项目成交公告"),
     ]
-    rows, stats = pool.merge(items, retrieve_date="2026-10-03", log=lambda *_: None)
+    rows, stats = pool.merge(items, extended_result_filter=True,
+                             retrieve_date="2026-10-03", log=lambda *_: None)
     assert len(rows) == 1
     assert stats["过滤中标类"] == 2
 

@@ -219,6 +219,59 @@ class PagingIntegrityError(RuntimeError):
     """翻页失效（假数据）时抛出。"""
 
 
+# 翻页健康度等级
+PAGING_OK = "ok"
+PAGING_DRIFT = "drift"      # 页间部分重叠：结果集在实时增长导致的偏移漂移
+PAGING_STALE = "stale"      # 相邻页完全相同：翻页未生效
+
+
+def diagnose_paging(page_title_lists) -> tuple[str, str]:
+    """诊断翻页健康度，返回 (等级, 说明)。
+
+    区分两种**完全不同**的病症，处置方式也不同：
+
+    | 等级 | 现象 | 成因 | 处置 |
+    |---|---|---|---|
+    | `stale` | 相邻页**完全相同** | 站点要求验证码/签名，请求未携带 → 每页都返回第 1 页 | 放弃翻页，改用其他维度分片 |
+    | `drift` | 相邻页**部分重叠** | 结果集按时间倒序且**正在实时增长**，页码是偏移量 → 新公告插入头部，整体下移 | 无法根治；**多次采集后合并**以提高覆盖 |
+
+    ⚠️ `drift` 是采集**当天**数据时特有的现象：当天的结果集一直在增长，
+    而历史窗口（昨天及更早）不再增长，翻页稳定。
+    实测中曾把它误报为"翻页未生效"，导致排查方向错误。
+    """
+    seqs = [list(s) for s in page_title_lists if s]
+    if len(seqs) < 2:
+        return PAGING_OK, ""
+
+    stale_pairs, drift_pairs = [], []
+    for i in range(1, len(seqs)):
+        prev, cur = seqs[i - 1], seqs[i]
+        if prev == cur:
+            stale_pairs.append(i + 1)
+            continue
+        overlap = len(set(prev) & set(cur))
+        if overlap:
+            drift_pairs.append((i + 1, overlap, min(len(prev), len(cur))))
+
+    if stale_pairs:
+        return PAGING_STALE, (
+            f"第 {stale_pairs} 页与上一页**完全相同** → 翻页未生效"
+            f"（常见成因：站点要求验证码／签名，请求未携带）。"
+            f"应立即停止翻页，不要拿重复数据充数。")
+
+    if drift_pairs:
+        detail = "；".join(f"第{p}页与上一页重叠 {o}/{t} 条" for p, o, t in drift_pairs)
+        return PAGING_DRIFT, (
+            f"检出页间重叠（{detail}）。"
+            f"成因：结果集按时间倒序且**正在实时增长**，而页码是偏移量 —— "
+            f"翻页期间新公告不断插入头部，导致整体下移，"
+            f"既产生重复、也会**漏掉部分条目**。"
+            f"这不是翻页失效，而是采集「当天」数据时的固有竞态；"
+            f"建议**分多次采集后合并**以提高覆盖（历史窗口不受影响）。")
+
+    return PAGING_OK, ""
+
+
 def check_paging_integrity(raw_count: int, unique_count: int, pages: int = 1,
                            *, max_dup_ratio: float = 1.0) -> None:
     """翻页完整性校验 —— **本项目最重要的质量闸**。
@@ -297,4 +350,5 @@ __all__ = [
     "check_paging_integrity", "PagingIntegrityError", "dedup",
     "sequence_identical", "today_iso", "JUNK_KEYWORDS", "DATE_RE",
     "DEFAULT_UA", "DEFAULT_TIMEOUT", "BLOCK_MARKERS",
+    "diagnose_paging", "PAGING_OK", "PAGING_DRIFT", "PAGING_STALE",
 ]

@@ -25,7 +25,7 @@
 * 采集结果**必须回源站复核**；本工具输出的是线索与入口，不是结论。
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .models import Notice, PLATFORM_CCGP, PLATFORM_CEB  # noqa: F401
 from . import ccgp, ceb, pool  # noqa: F401

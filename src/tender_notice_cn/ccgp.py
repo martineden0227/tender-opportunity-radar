@@ -28,9 +28,9 @@ import requests
 from bs4 import BeautifulSoup
 
 from .common import (
-    BLOCKED, DEFAULT_TIMEOUT, DEFAULT_UA, NETWORK, STRUCTURE,
+    BLOCKED, DEFAULT_TIMEOUT, DEFAULT_UA, NETWORK, PAGING_DRIFT, STRUCTURE,
     build_session, check_paging_integrity, clean_date, decode_html,
-    is_junk, looks_blocked, norm_title, retry_call, to_iso_date,
+    diagnose_paging, is_junk, looks_blocked, norm_title, retry_call, to_iso_date,
 )
 from .models import PLATFORM_CCGP, Notice
 
@@ -193,6 +193,7 @@ def collect(*, pages: int = 1, keyword: str = "", pinmu: str = "0",
     seen: set[str] = set()
     raw_rows = 0
     pages_fetched = 0
+    page_titles: list[list[str]] = []      # 用于翻页健康度诊断
 
     for page in range(1, pages + 1):
         log(f"\n=== 第 {page}/{pages} 页 ===")
@@ -214,6 +215,7 @@ def collect(*, pages: int = 1, keyword: str = "", pinmu: str = "0",
 
         pages_fetched += 1
         raw_rows += len(items)
+        page_titles.append([norm_title(x.title) for x in items])
         new = [x for x in items if norm_title(x.title) not in seen]
         for x in new:
             seen.add(norm_title(x.title))
@@ -228,6 +230,13 @@ def collect(*, pages: int = 1, keyword: str = "", pinmu: str = "0",
 
         if page < pages:
             time.sleep(random.uniform(lo, hi))
+
+    # 翻页健康度诊断：区分"假翻页"与"实时漂移"（两者处置完全不同）
+    level, msg = diagnose_paging(page_titles)
+    if level == PAGING_DRIFT:
+        log(f"\n[翻页提示] {msg}")
+    elif level:
+        log(f"\n[翻页警告] {msg}")
 
     try:
         check_paging_integrity(raw_rows, len(found), pages_fetched)

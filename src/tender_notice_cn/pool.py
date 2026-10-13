@@ -21,8 +21,21 @@ from .models import POOL_COLUMNS, Notice
 
 
 def merge(notices: list[Notice], *, drop_result_notices: bool = True,
+          extended_result_filter: bool = False,
           retrieve_date: str = "", log=print):
-    """合并去重，返回 (行列表, 统计字典)。"""
+    """合并去重，返回 (行列表, 统计字典)。
+
+    参数
+    ----
+    drop_result_notices
+        是否过滤中标/成交类公告（默认 True）。
+    extended_result_filter
+        是否使用**更严**的过滤口径。
+        默认 False —— 使用与正式版（5,702 条那版）**逐字一致**的词表，
+        以保证与既有产出可比。
+        置 True 会额外过滤「流标／成交公告／结果公示」等
+        （实测多滤 52 条，这些确属非机会类，但会改变条数口径）。
+    """
     rdate = retrieve_date or today_iso()
 
     seen: set[str] = set()
@@ -32,9 +45,12 @@ def merge(notices: list[Notice], *, drop_result_notices: bool = True,
     for n in notices:
         if not n.title.strip():
             continue
-        if drop_result_notices and n.is_result_notice:
-            dropped_result += 1
-            continue
+        if drop_result_notices:
+            hit = (n.is_result_notice_extended if extended_result_filter
+                   else n.is_result_notice)
+            if hit:
+                dropped_result += 1
+                continue
         k = norm_title(n.title)
         if k in seen:
             dropped_dup += 1
@@ -47,6 +63,8 @@ def merge(notices: list[Notice], *, drop_result_notices: bool = True,
         "去重丢弃": dropped_dup,
         "过滤中标类": dropped_result,
         "输出条数": len(rows),
+        "过滤口径": ("扩展（含流标/成交公告/结果公示）" if extended_result_filter
+                     else "正式版核心词表"),
         "来源构成": dict(Counter(r["来源平台"] for r in rows)),
     }
     log(f"合并：输入 {len(notices)} → 去重丢弃 {dropped_dup} → "

@@ -160,3 +160,50 @@ def test_normal_page_not_blocked():
 
 def test_status_constants_are_distinct():
     assert len({BLOCKED, NETWORK, STRUCTURE}) == 3
+
+
+# --------------------------------------------------- 翻页健康度诊断（drift vs stale）
+
+def test_paging_diagnosis_ok_when_pages_distinct():
+    from tender_notice_cn.common import diagnose_paging, PAGING_OK
+    pages = [["a", "b", "c"], ["d", "e", "f"]]
+    level, msg = diagnose_paging(pages)
+    assert level == PAGING_OK and msg == ""
+
+
+def test_paging_diagnosis_detects_stale():
+    """相邻页完全相同 → 翻页未生效（假翻页）。"""
+    from tender_notice_cn.common import diagnose_paging, PAGING_STALE
+    pages = [["a", "b"], ["a", "b"], ["a", "b"]]
+    level, msg = diagnose_paging(pages)
+    assert level == PAGING_STALE
+    assert "翻页未生效" in msg
+
+
+def test_paging_diagnosis_detects_drift():
+    """页间部分重叠 → 实时增长导致的偏移漂移（**不是**翻页失效）。
+
+    实测：采集"当天"数据时，页3 的前 7 条正好是页1 的第 14~20 条 ——
+    因为新公告不断插入头部，整体下移。
+    """
+    from tender_notice_cn.common import diagnose_paging, PAGING_DRIFT
+    page1 = [f"t{i}" for i in range(1, 21)]
+    page2 = [f"t{i}" for i in range(14, 34)]
+    level, msg = diagnose_paging([page1, page2])
+    assert level == PAGING_DRIFT
+    assert "实时增长" in msg
+    assert "翻页未生效" not in msg          # 不得与假翻页混为一谈
+
+
+def test_paging_diagnosis_stale_takes_precedence():
+    """既有完全相同又有部分重叠时，按更严重的"翻页未生效"报。"""
+    from tender_notice_cn.common import diagnose_paging, PAGING_STALE
+    pages = [["a", "b"], ["a", "b"], ["b", "c"]]
+    level, _ = diagnose_paging(pages)
+    assert level == PAGING_STALE
+
+
+def test_paging_diagnosis_single_page():
+    from tender_notice_cn.common import diagnose_paging, PAGING_OK
+    assert diagnose_paging([["a", "b"]])[0] == PAGING_OK
+    assert diagnose_paging([])[0] == PAGING_OK
