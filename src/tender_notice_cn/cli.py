@@ -185,7 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--version", action="version", version="tender-notice-cn 0.1.1")
+    p.add_argument("--version", action="version", version="tender-notice-cn 0.1.2")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     # check

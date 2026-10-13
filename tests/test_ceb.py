@@ -101,3 +101,20 @@ def test_cross_slice_duplicates_are_not_treated_as_paging_failure():
 
     # 而按"页码翻页"口径，少量重复是允许的
     check_paging_integrity(raw_count=100, unique_count=97, pages=5)
+
+
+def test_category_comes_from_request_param_not_record():
+    """接口**不返回**公告类型字段（实测字段全集里没有），
+    类型由请求参数 businessType 决定，须按 BUSINESS_TYPE 落库。
+
+    若留空，"公告类型"列会整列为空 —— 实测当天 152 条全部缺失。
+    """
+    from tender_notice_cn import ceb
+    assert ceb.BUSINESS_TYPE == "招标公告"
+    raw = (FIXTURES / "ceb_response.json").read_text(encoding="utf-8")
+    records = json.loads(raw)["object"]["returnlist"]
+    for n in ceb.parse_records(records):
+        assert n.category == ceb.BUSINESS_TYPE, "公告类型未按请求参数落库"
+        # 反向确认：记录里确实没有类型字段可依赖
+        assert not any("type" in k.lower() and isinstance(v, str) and "公告" in v
+                       for rec in records for k, v in rec.items())

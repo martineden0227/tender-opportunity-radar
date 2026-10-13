@@ -104,7 +104,8 @@ class Notice:
             "采购人／代理机构": who or "列表页未列明，需点入详情确认",
             "区域": self.area,
             "预算·限价": "列表页未列明，需点入详情确认",
-            "投标截止": self.deadline or "以平台日程安排为准",
+            "投标截止": (f"{self.deadline}（公告结束时间，非投标截止，须回详情确认）"
+                        if self.deadline else "以平台日程安排为准"),
             "总判定": "待确认",
             "来源平台": f"全国级·{self.source_label}",
             "详情入口": self.url,

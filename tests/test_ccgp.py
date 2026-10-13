@@ -126,3 +126,32 @@ def test_params_are_url_encodable():
 
 def test_empty_html_returns_empty_list():
     assert ccgp.parse_search_result("<html><body>没有结果</body></html>") == []
+
+
+# ---------------------------------------- 采购品目 / 地区 的字段归属（2026-10-13 实测踩坑）
+
+def test_second_strong_is_purchase_category(items):
+    """第 2 个 <strong> 是采购品目，应存入 industry，不得进 area。"""
+    assert any(n.industry for n in items), "样例应含采购品目"
+    for n in items:
+        assert n.industry != n.area
+
+
+def test_short_purchase_category_not_mistaken_for_area(items):
+    """回归测试：短品目骗过启发式过滤。
+
+    真实页面里「服务/其他服务」只有 7 个字，若按
+    「取最后一个分隔段 + 长度 ≤ 10 则视为地区」来取数，它会被写进「区域」列，
+    而且**不会报错** —— 实测当天 246 条里污染了 16 条。
+    必须按 DOM 位置（两个 <strong> 之间的纯文本）判定。
+    """
+    n = next(x for x in items if "数据要素大赛" in x.title)
+    assert n.area == "山东", f"地区取错：{n.area!r}"
+    assert n.industry == "服务/其他服务", f"品目取错：{n.industry!r}"
+
+
+def test_area_never_contains_slash_or_notice_word(items):
+    """地区字段的硬约束：不得含 '/'（品目特征）或 '公告'（类型特征）。"""
+    for n in items:
+        assert "/" not in n.area, f"地区被写成品目：{n.area!r} ({n.title[:20]})"
+        assert "公告" not in n.area, f"地区被写成类型：{n.area!r}"

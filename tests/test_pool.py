@@ -150,3 +150,17 @@ def test_write_markdown_states_scope_boundary(tmp_path: Path):
     text = out.read_text(encoding="utf-8")
     assert "待确认" in text
     assert "口径边界" in text or "全量" in text
+
+
+def test_deadline_cell_flags_it_is_not_bid_deadline():
+    """平台二给的是「公告结束时间」，不是「投标截止时间」。
+
+    直接写进"投标截止"列会被误用于排期 —— 必须显式标注口径。
+    """
+    n = _n(title="某项目招标公告", deadline="2026-10-20", platform=PLATFORM_CEB)
+    row = n.to_row(1, "2026-10-13")
+    assert "2026-10-20" in row["投标截止"]
+    assert "非投标截止" in row["投标截止"]
+
+    n2 = _n(title="某项目招标公告", deadline="")
+    assert n2.to_row(1, "2026-10-13")["投标截止"] == "以平台日程安排为准"

@@ -43,6 +43,10 @@ REFERER = BASE + "/ctpsp_iiss/searchbusinesstypebeforedooraction/getSearch.do"
 DETAIL_URL = BASE + "/ctpsp_iiss/search/bulletin/searchBulletinDetail.do?bulletinId={}"
 
 MAX_ROW = 500                 # 实测上限；再大无收益
+
+# 公告类型由请求参数决定（接口不返回类型字段）。
+# 取"招标公告"= 只采机会类公告；改成"中标结果公示"等即改为采结果类。
+BUSINESS_TYPE = "招标公告"
 DEFAULT_DELAY = 1.5
 BLOCK_WAIT = 90.0
 MAX_BLOCK_RETRY = 3
@@ -140,6 +144,10 @@ def parse_records(records) -> list[Notice]:
             area=g(rec, "regionName"),
             industry=g(rec, "industriesType"),
             platform_name=g(rec, "transactionPlatfName"),
+            # 接口**不返回**公告类型字段，类型由请求参数 businessType 决定 ——
+            # 本适配器恒以 businessType=招标公告 请求，故类型即"招标公告"。
+            # （实测返回字段全集里无任何类型字段，故不能从记录中取。）
+            category=BUSINESS_TYPE,
             deadline=deadline,
             project_code=g(rec, "tenderProjectCode"),
             issues=issue,

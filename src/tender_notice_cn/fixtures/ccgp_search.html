@@ -5,11 +5,19 @@
 <!--
   离线演练用样例页。
 
-  结构**按真实检索结果页核实后构造**（2026-10 复核），用于在不联网的情况下
-  验证解析链路。刻意保留了三种边界情形：
-    1. 无地区的一段（地区字段在真实页面中经常整体缺失）
+  结构**按真实检索结果页逐字核实后构造**（2026-10-13 复核），用于在不联网的
+  情况下验证解析链路。每条 <span> 的形式为：
+
+      时间 | 采购人：X | 代理机构：Y <br/>
+      <strong>公告类型</strong> | 地区 | <strong>采购品目</strong>
+
+  刻意保留的边界情形：
+    1. 地区整体缺失（真实页面常见）→ 必须留空，不得用类型或品目填补
     2. 代理机构与公告类型之间无分隔符（真实页面用 <br/> 换行，不产生 "|"）
     3. 一条表头/提示行垃圾数据，应被过滤
+    4. **短采购品目**（如「服务/其他服务」，仅 7 字）—— 这是最容易出错的一条：
+       若按「最后一个分隔段 + 长度阈值」启发式取地区，它会骗过过滤被写进「区域」列。
+       必须按 DOM 位置（两个 <strong> 之间）判定。
 
   ⚠️ 内容为构造的示意数据，不是真实公告，不得用于任何业务判断。
 -->
@@ -23,63 +31,63 @@
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gzgg/202610/t20261003_20000001.htm" style="line-height:18px">某市生态环境监测实验室基础能力提升改造项目（设备采购）采购结果更正公告</a>
       <p></p>
-      <span>2026.10.03 12:04:38 | 采购人：某师生态环境监测站 | 代理机构：某工程项目管理有限公司 <br/> <strong style="font-weight:bolder"> 更正公告 </strong> | | <strong style="font-weight:bolder"> </strong> </span>
+      <span>2026.10.03 12:04:38 | 采购人：某师生态环境监测站 | 代理机构：某工程项目管理有限公司 <br/> <strong style="font-weight:bolder"> 更正公告 </strong> | | <strong style="font-weight:bolder"> 货物/设备/仪器仪表/其他仪器仪表 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/jzxcs/202610/t20261003_20000002.htm" style="line-height:18px">某工程项目管理咨询有限公司关于某铁路连接线建设项目（监理）的竞争性磋商公告</a>
       <p></p>
-      <span>2026.10.03 11:46:53 | 采购人：某农场城镇管理和生态保护中心 | 代理机构：某飞腾达工程项目管理咨询有限公司 <br/> <strong style="font-weight:bolder"> 竞争性磋商公告 </strong> | | <strong style="font-weight:bolder"> 新疆 </strong> </span>
+      <span>2026.10.03 11:46:53 | 采购人：某农场城镇管理和生态保护中心 | 代理机构：某飞腾达工程项目管理咨询有限公司 <br/> <strong style="font-weight:bolder"> 竞争性磋商公告 </strong> | 新疆 | <strong style="font-weight:bolder"> 服务/工程管理服务/工程监理服务 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/jzxcs/202610/t20261003_20000003.htm" style="line-height:18px">数据要素大赛全国总决赛及颁奖仪式竞争性磋商公告</a>
       <p></p>
-      <span>2026.10.03 11:45:18 | 采购人：某省大数据局 | 代理机构：某浩邦招标有限公司 <br/> <strong style="font-weight:bolder"> 竞争性磋商公告 </strong> | | <strong style="font-weight:bolder"> 山东 </strong> </span>
+      <span>2026.10.03 11:45:18 | 采购人：某省大数据局 | 代理机构：某浩邦招标有限公司 <br/> <strong style="font-weight:bolder"> 竞争性磋商公告 </strong> | 山东 | <strong style="font-weight:bolder"> 服务/其他服务 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gkzb/202610/t20261003_20000004.htm" style="line-height:18px">某理工大学省优势特色学科建设设备采购（二）公开招标招标公告</a>
       <p></p>
-      <span>2026.10.03 11:45:17 | 采购人：某理工大学 | 代理机构：某三木招标有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> 山东 </strong> </span>
+      <span>2026.10.03 11:45:17 | 采购人：某理工大学 | 代理机构：某三木招标有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | 山东 | <strong style="font-weight:bolder"> 货物/设备/仪器仪表/其他仪器仪表 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gkzb/202610/t20261003_20000005.htm" style="line-height:18px">某理工大学应用套装正版软件服务公开招标招标公告</a>
       <p></p>
-      <span>2026.10.02 17:20:09 | 采购人：某理工大学 | 代理机构：某三木招标有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> 山东 </strong> </span>
+      <span>2026.10.02 17:20:09 | 采购人：某理工大学 | 代理机构：某三木招标有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | 山东 | <strong style="font-weight:bolder"> 服务/信息技术服务/软件开发服务 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gzgg/202610/t20261002_20000006.htm" style="line-height:18px">某市政府集中采购中心关于多媒体教学设备采购的更正公告</a>
       <p></p>
-      <span>2026.10.02 09:31:44 | 采购人：某市政府集中采购中心 | 代理机构：某市政府集中采购中心 <br/> <strong style="font-weight:bolder"> 更正公告 </strong> | | <strong style="font-weight:bolder"> 广西 </strong> </span>
+      <span>2026.10.02 09:31:44 | 采购人：某市政府集中采购中心 | 代理机构：某市政府集中采购中心 <br/> <strong style="font-weight:bolder"> 更正公告 </strong> | 广西 | <strong style="font-weight:bolder"> 货物/设备/电气设备 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gkzb/202610/t20261002_20000007.htm" style="line-height:18px">某工程咨询公司关于城乡气象灾害监测预警补盲工程的公开招标公告</a>
       <p></p>
-      <span>2026.10.02 08:55:12 | 采购人：某市气象局 | 代理机构：某联合工程咨询有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> 浙江 </strong> </span>
+      <span>2026.10.02 08:55:12 | 采购人：某市气象局 | 代理机构：某联合工程咨询有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | 浙江 | <strong style="font-weight:bolder"> 工程/其他建筑工程 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/dfgg/gkzb/202610/t20261001_20000008.htm" style="line-height:18px">某省产品质量监督检验研究院大规模设备更新采购项目公开招标公告</a>
       <p></p>
-      <span>2026.10.01 16:02:37 | 采购人：某省产品质量监督检验研究院 | 代理机构：某招标股份有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> 湖北 </strong> </span>
+      <span>2026.10.01 16:02:37 | 采购人：某省产品质量监督检验研究院 | 代理机构：某招标股份有限公司 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | 湖北 | <strong style="font-weight:bolder"> 货物/设备/仪器仪表 </strong> </span>
     </li>
   </ul>
   <ul>
     <li>
       <a href="http://www.ccgp.gov.cn/cggg/zygg/gkzb/202610/t20261001_20000009.htm" style="line-height:18px">某单位办公家具批量采购项目公开招标公告</a>
       <p></p>
-      <span>2026.10.01 10:10:05 | 采购人：某单位办公室 | 代理机构：某采购代理中心 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> </strong> </span>
+      <span>2026.10.01 10:10:05 | 采购人：某单位办公室 | 代理机构：某采购代理中心 <br/> <strong style="font-weight:bolder"> 公开招标公告 </strong> | | <strong style="font-weight:bolder"> 货物/家具 </strong> </span>
     </li>
   </ul>
 </div>

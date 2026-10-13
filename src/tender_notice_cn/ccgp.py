@@ -88,20 +88,36 @@ def build_params(page_index: int, keyword: str = "", pinmu: str = "0",
 def parse_search_result(html: str) -> list[Notice]:
     """解析检索结果页。
 
-    真实结构（已抓真实页面核实）：
+    真实结构（2026-10-13 抓真实页面逐字核实）：
 
         <div class="vT-srch-result-list-bid">
           <li>
-            <a href="…/t20261003_27439571.htm">标题</a>
+            <a href="…/t20261013_xxx.htm">标题</a>
             <p></p>
-            <span>2026.10.03 12:04:38 | 采购人：XXX | 代理机构：YYY
-                  <br/><strong>更正公告</strong> | | <strong>（地区，常空）</strong>
+            <span>2026.10.13 09:14:48 | 采购人：东南大学 | 代理机构：江苏省招标中心有限公司
+                  <br/><strong>公开招标公告</strong> | 江苏 |
+                  <strong>货物/设备/仪器仪表/其他仪器仪表</strong>
             </span>
           </li>
           ...
         </div>
 
-    注意：每个 `<li>` **同时**包住标题链接与元数据。
+    字段定位（**按 DOM 结构，不按分隔符位置**）：
+
+    | 字段 | 位置 |
+    |---|---|
+    | 时间 | 文本开头的 `YYYY.MM.DD HH:MM:SS` |
+    | 采购人 / 代理机构 | `采购人：` / `代理机构：` 中文标记之后 |
+    | 公告类型 | **第 1 个 `<strong>`** |
+    | 地区 | 第 1 个 `<strong>` 与第 2 个 `<strong>` **之间的纯文本** |
+    | 采购品目 | **第 2 个 `<strong>`**（如 `服务/商务服务/…`） |
+
+    ⚠️ 两个易错点（都曾实际出错）：
+    1. 地区**不是** `<strong>`，也不是最后一段。采购品目才是最后一段，
+       且短品目（如 `服务/其他服务`，7 字）能骗过"长度 ≤ 10"这类启发式过滤
+       → 会让"区域"列被写成采购品目。**必须按 DOM 位置取。**
+    2. 每个 `<li>` **同时**包住标题链接与元数据，不能拿 `li > a` 与 `span`
+       做下标配对（数量不保证一致）。
     """
     soup = BeautifulSoup(html, "html.parser")
     container = soup.select_one(RESULT_SELECTOR)
@@ -136,18 +152,23 @@ def parse_search_result(html: str) -> list[Notice]:
             ma = re.search(r"代理机构\s*[：:]\s*([^|]+)", txt)
             n.agency = ma.group(1).strip() if ma else ""
 
-            # 公告类型：第 1 个 <strong>，稳定可靠
-            strongs = [s.get_text(strip=True) for s in span.find_all("strong")]
-            n.category = strongs[0] if strongs else ""
+            # 公告类型：第 1 个 <strong>
+            # 采购品目：第 2 个 <strong>
+            # 地区    ：两者**之间**的纯文本
+            strongs = span.find_all("strong")
+            n.category = strongs[0].get_text(strip=True) if strongs else ""
+            if len(strongs) >= 2:
+                n.industry = strongs[1].get_text(strip=True)
+                n.area = _text_between(strongs[0], strongs[1])
+            else:
+                # 只有 1 个 <strong> 的版式不取地区：宁可留空，也不按位置猜
+                n.area = ""
 
-            # 地区：不在 <strong> 内，是尾部纯文本（省份简称，常整体缺失）
-            segs = [p.strip() for p in txt.split("|") if p.strip()]
-            if len(segs) >= 4:
-                cand = segs[-1]
-                if (cand and cand != n.category and "公告" not in cand
-                        and "采购人" not in cand and "代理机构" not in cand
-                        and not re.match(r"^\d{4}[.\-/]", cand) and len(cand) <= 10):
-                    n.area = cand
+            # 兜底校验：地区只接受短地名；品目/公告类型一律不得进地区
+            if n.area and ("/" in n.area or "公告" in n.area or len(n.area) > 12):
+                if not n.industry and "/" in n.area:
+                    n.industry = n.area      # 误落进地区的品目归位
+                n.area = ""
 
             # `<br/>` 不产生分隔符，会导致类型/地区粘在代理机构尾部
             for suffix in (n.category, n.area):
@@ -156,6 +177,17 @@ def parse_search_result(html: str) -> list[Notice]:
 
         notices.append(n)
     return notices
+
+
+def _text_between(start, end) -> str:
+    """取两个标签之间的纯文本（去空白与分隔竖线）。"""
+    buf: list[str] = []
+    node = start.next_sibling
+    while node is not None and node is not end:
+        if isinstance(node, str):
+            buf.append(node)
+        node = node.next_sibling
+    return " ".join("".join(buf).split()).strip(" |")
 
 
 def fetch_once(session: requests.Session, params: dict) -> tuple[str | None, str]:
