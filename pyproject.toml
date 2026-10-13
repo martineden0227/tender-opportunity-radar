@@ -28,7 +28,7 @@ dev = ["pytest>=7.0"]
 tender-notice = "tender_notice_cn.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/martineden0227/tender-notice-cn"
+Homepage = "https://github.com/martineden0227/tender-opportunity-radar"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

@@ -1,4 +1,6 @@
-# tender-notice-cn
+# tender-opportunity-radar
+
+> Python 包名 `tender-notice-cn`，命令入口 `tender-notice`。仓库名与包名不同，属正常情况。
 
 中国招标公告采集工具。覆盖两个**全国级**公开渠道：
 
@@ -66,8 +68,8 @@
 ## 安装
 
 ```bash
-git clone https://github.com/<your-account>/tender-notice-cn.git
-cd tender-notice-cn
+git clone https://github.com/martineden0227/tender-opportunity-radar.git
+cd tender-opportunity-radar
 pip install -e .
 ```
 
